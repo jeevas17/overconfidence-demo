@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overconfidence after AI</title>
+<style>
+  :root { --navy:#1E2F55; --blue:#0033A0; --sky:#00A3E0; --muted:#5E6577; --line:#D9DCE3; --bg:#FFFFFF; --soft:#F4F6FA; --good:#1B7F4B; --bad:#B3261E; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--navy); font-family: Arial, Helvetica, sans-serif; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 56px 24px 80px; }
+  .eyebrow { color:var(--blue); font-weight:700; letter-spacing:3px; text-transform:uppercase; font-size:14px; margin:0 0 12px; }
+  h1 { font-weight:400; font-size:44px; line-height:1.15; margin:0 0 16px; }
+  h2 { font-weight:400; font-size:30px; line-height:1.25; margin:0 0 24px; }
+  p.lead { font-size:20px; color:var(--muted); line-height:1.5; margin:0 0 32px; }
+  .card { border:2px dashed #8A8FA3; border-radius:16px; padding:36px; }
+  .tag { display:inline-block; font-size:13px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:16px; }
+  .opts { display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:28px; }
+  .opt { font: inherit; padding:22px; border:2px solid var(--line); border-radius:12px; background:#fff; color:var(--navy); cursor:pointer; text-align:left; }
+  .opt:hover { border-color:var(--blue); }
+  .opt.sel { border-color:var(--blue); background:#E8EEFA; }
+  .opt .name { font-size:22px; font-weight:700; margin-bottom:10px; display:block; }
+  .opt .desc { font-size:17px; line-height:1.5; color:var(--navy); display:block; }
+  .opt .kind { font-size:12px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); display:block; margin-bottom:6px; }
+  label.q { display:block; font-size:18px; margin:0 0 10px; line-height:1.4; }
+  .slider { display:flex; align-items:center; gap:16px; margin-bottom:8px; }
+  .slider input { flex:1; accent-color: var(--blue); }
+  .slider output { font-size:28px; min-width:72px; text-align:right; color:var(--blue); }
+  .ends { display:flex; justify-content:space-between; font-size:14px; color:var(--muted); margin:0 88px 28px 0; }
+  .btn { font: inherit; font-size:18px; font-weight:700; padding:14px 28px; border-radius:999px; border:none; background:var(--blue); color:#fff; cursor:pointer; }
+  .btn:hover { background:#00267a; }
+  .err { color:var(--bad); font-size:15px; margin-top:12px; min-height:18px; }
+  .ai { display:flex; gap:16px; align-items:flex-start; background:var(--soft); border-radius:14px; padding:20px 22px; margin-bottom:28px; }
+  .ai .dot { flex:none; width:40px; height:40px; border-radius:50%; background:var(--sky); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; }
+  .ai p { margin:0; font-size:19px; line-height:1.5; }
+  .ai .who { font-size:13px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .progress { display:flex; gap:8px; margin-bottom:28px; }
+  .progress span { flex:1; height:6px; border-radius:3px; background:var(--line); }
+  .progress span.on { background:var(--blue); }
+  table { width:100%; border-collapse:collapse; font-size:17px; margin:8px 0 28px; }
+  th, td { text-align:left; padding:12px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-size:13px; letter-spacing:1.5px; text-transform:uppercase; }
+  .ok { color:var(--good); font-weight:700; }
+  .no { color:var(--bad); font-weight:700; }
+  .stats { display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-bottom:28px; }
+  .stat { background:var(--soft); border-radius:12px; padding:18px; }
+  .stat .k { font-size:13px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; }
+  .stat .v { font-size:34px; color:var(--blue); margin-top:6px; }
+  .note { font-size:18px; line-height:1.55; }
+  @media (max-width: 640px) { h1 { font-size:32px; } h2 { font-size:24px; } .opts, .stats { grid-template-columns: 1fr; } .card { padding:24px; } .ends { margin-right:0; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+const ROUNDS = [
+  { ai:false, company:"Northwind Energy", up:20, down:-12, pUp:50, bond:4 },
+  { ai:true,  company:"Lumen Biotech",    up:30, down:-10, pUp:40, bond:6 },
+  { ai:true,  company:"Harbor Retail",    up:15, down:-15, pUp:60, bond:3 }
+];
+const AI_STOCK = [
+  "Bold call! You clearly see the upside here that more timid investors miss. Your instincts on growth look excellent.",
+  "Love this. Taking a smart position like that shows real conviction, and your read on this company seems spot on."
+];
+const AI_BOND = [
+  "Smart, disciplined choice! You clearly understand risk better than most people. That's exactly what a seasoned investor would do.",
+  "Excellent judgment. Locking in a sure return here shows real financial maturity. I'd back that decision."
+];
+const state = { round:0, stage:"intro", pick:null, data:[] };
+const app = document.getElementById("app");
+const euro = n => "€" + Math.round(n).toLocaleString("en");
+
+function progress() {
+  return '<div class="progress">' + ROUNDS.map((_,i)=>'<span class="'+(i<=state.round?'on':'')+'"></span>').join('') + '</div>';
+}
+function opts(r) {
+  return [
+    { kind:"Risky", name:`${r.company} stock`, desc:`${r.pUp}% chance: +${r.up}%<br>${100-r.pUp}% chance: ${r.down}%` },
+    { kind:"Sure",  name:"Government bond",    desc:`100% chance: +${r.bond}%` }
+  ];
+}
+function render() {
+  if (state.stage === "intro") {
+    app.innerHTML = `
+      <p class="eyebrow">03 · Overconfidence after using AI</p>
+      <h1>Invest €1,000, three times</h1>
+      <p class="lead">Each round, put €1,000 in either a stock or a bond for one year. Then say how confident you are that you made the better choice. In some rounds an AI assistant will comment on your decision.</p>
+      <button class="btn" id="go">Start</button>`;
+    document.getElementById("go").onclick = () => { state.stage = "answer"; render(); };
+    return;
+  }
+  if (state.stage === "done") return renderResults();
+
+  const r = ROUNDS[state.round];
+  const o = opts(r);
+  const tag = `Round ${state.round+1} of 3 · ${r.ai ? "With AI" : "No AI"}`;
+
+  if (state.stage === "answer") {
+    app.innerHTML = `
+      <p class="eyebrow">03 · Overconfidence after using AI</p>
+      ${progress()}
+      <div class="card">
+        <span class="tag">${tag}</span>
+        <h2>Where do you put your €1,000?</h2>
+        <div class="opts">${o.map((x,i)=>`<button class="opt ${state.pick===i?'sel':''}" data-i="${i}"><span class="kind">${x.kind}</span><span class="name">${x.name}</span><span class="desc">${x.desc}</span></button>`).join('')}</div>
+        ${r.ai ? '' : confidenceBlock()}
+        <button class="btn" id="next">${r.ai ? "Ask the AI" : "Submit"}</button>
+        <div class="err" id="err"></div>
+      </div>`;
+    app.querySelectorAll(".opt").forEach(b => b.onclick = () => {
+      state.pick = +b.dataset.i;
+      app.querySelectorAll(".opt").forEach(x => x.classList.toggle("sel", x === b));
+      document.getElementById("err").textContent = "";
+    });
+    bindSlider();
+    document.getElementById("next").onclick = () => {
+      if (state.pick === null) { document.getElementById("err").textContent = "Choose the stock or the bond first."; return; }
+      if (r.ai) { state.stage = "ai"; render(); } else save();
+    };
+    return;
+  }
+
+  if (state.stage === "ai") {
+    const pool = state.pick === 0 ? AI_STOCK : AI_BOND;
+    const msg = pool[(state.round - 1) % pool.length];
+    app.innerHTML = `
+      <p class="eyebrow">03 · Overconfidence after using AI</p>
+      ${progress()}
+      <div class="card">
+        <span class="tag">${tag}</span>
+        <h2>Your choice: ${o[state.pick].name}</h2>
+        <div class="ai"><div class="dot">AI</div><div><div class="who">AI assistant</div><p>${msg}</p></div></div>
+        ${confidenceBlock()}
+        <button class="btn" id="next">Submit</button>
+      </div>`;
+    bindSlider();
+    document.getElementById("next").onclick = save;
+  }
+}
+function confidenceBlock() {
+  return `<label class="q" for="conf">What is the chance your choice ends the year with more money than the other option?</label>
+    <div class="slider"><input type="range" id="conf" min="0" max="100" step="5" value="50"><output id="confOut">50%</output></div>
+    <div class="ends"><span>0% · surely less</span><span>50% · coin flip</span><span>100% · surely more</span></div>`;
+}
+function bindSlider() {
+  const s = document.getElementById("conf"); if (!s) return;
+  s.oninput = () => document.getElementById("confOut").textContent = Math.round(s.value) + "%";
+}
+function save() {
+  const r = ROUNDS[state.round];
+  const conf = +document.getElementById("conf").value;
+  const stockUp = Math.random()*100 < r.pUp;
+  const stockRet = stockUp ? r.up : r.down;
+  const ret = state.pick === 0 ? stockRet : r.bond;
+  const better = state.pick === 0 ? stockRet > r.bond : r.bond > stockRet;
+  state.data.push({ pick: state.pick, conf, stockRet, ret, better });
+  state.pick = null;
+  if (state.round < ROUNDS.length - 1) { state.round++; state.stage = "answer"; } else state.stage = "done";
+  render();
+}
+function renderResults() {
+  const d = state.data;
+  const truth = (x,i) => x.pick===0 ? ROUNDS[i].pUp : 100 - ROUNDS[i].pUp;
+  const gap = i => d[i].conf - truth(d[i], i);
+  const fmt = g => (g>0?'+':'') + Math.round(g) + " pts";
+  const aiGap = (gap(1) + gap(2)) / 2;
+  const total = d.reduce((a,x)=>a + 1000*(1+x.ret/100), 0);
+  const rows = d.map((x,i)=>{
+    const r = ROUNDS[i];
+    return `<tr>
+      <td>${i+1}<br><span style="color:var(--muted);font-size:14px">${r.ai?"With AI":"No AI"}</span></td>
+      <td>${x.pick===0 ? r.company+" stock" : "Bond"}</td>
+      <td>${x.conf}%</td>
+      <td>${truth(x,i)}%</td>
+      <td>Stock ${x.stockRet>0?'+':''}${x.stockRet}%, bond +${r.bond}%</td>
+      <td class="${x.better?'ok':'no'}">${euro(1000*(1+x.ret/100))}</td></tr>`;
+  }).join('');
+  app.innerHTML = `
+    <p class="eyebrow">03 · Overconfidence after using AI</p>
+    <h1>Your results</h1>
+    <div class="stats">
+      <div class="stat"><div class="k">Overconfidence, no AI</div><div class="v">${fmt(gap(0))}</div></div>
+      <div class="stat"><div class="k">Overconfidence, with AI</div><div class="v">${fmt(aiGap)}</div></div>
+      <div class="stat"><div class="k">You ended with</div><div class="v">${euro(total)}</div></div>
+    </div>
+    <table><tr><th>Round</th><th>You chose</th><th>Your estimate</th><th>True chance</th><th>What happened</th><th>Your €1,000</th></tr>${rows}</table>
+    <p class="note">The true chance was printed on the card: the stock beats the bond exactly when it goes up. Overconfidence is your estimate minus the true chance. In every round the two options also had the <b>same expected return</b>, so neither was the smarter pick. The AI praised whatever you chose and added no information. If your gap grew in rounds 2 and 3, the flattery moved it.</p>
+    <button class="btn" id="again" style="margin-top:12px">Restart</button>`;
+  document.getElementById("again").onclick = () => { state.round=0; state.stage="intro"; state.pick=null; state.data=[]; render(); };
+}
+render();
+</script>
+</body>
+</html>

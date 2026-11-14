@@ -109,7 +109,7 @@ function render() {
         <span class="tag">${tag}</span>
         <h2>Where do you put your €1,000?</h2>
         <div class="opts">${o.map((x,i)=>`<button class="opt ${state.pick===i?'sel':''}" data-i="${i}"><span class="kind">${x.kind}</span><span class="name">${x.name}</span><span class="desc">${x.desc}</span></button>`).join('')}</div>
-        ${r.ai ? '' : confidenceBlock()}
+        ${r.ai ? '' : `<div id="rate" style="display:${state.pick===null?'none':'block'}">${confidenceBlock()}</div>`}
         <button class="btn" id="next">${r.ai ? "Ask the AI" : "Submit"}</button>
         <div class="err" id="err"></div>
       </div>`;
@@ -117,6 +117,7 @@ function render() {
       state.pick = +b.dataset.i;
       app.querySelectorAll(".opt").forEach(x => x.classList.toggle("sel", x === b));
       document.getElementById("err").textContent = "";
+      const rate = document.getElementById("rate"); if (rate) rate.style.display = "block";
     });
     bindSlider();
     document.getElementById("next").onclick = () => {

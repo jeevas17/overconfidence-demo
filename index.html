@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Overconfidence after AI</title>
+<title>Make three calls</title>
 <style>
   :root { --navy:#1E2F55; --blue:#0033A0; --sky:#00A3E0; --muted:#5E6577; --line:#D9DCE3; --bg:#FFFFFF; --soft:#F4F6FA; --good:#1B7F4B; --bad:#B3261E; }
   * { box-sizing: border-box; }
@@ -94,7 +94,7 @@ function opts(r) {
 function render() {
   if (state.stage === "intro") {
     app.innerHTML = `
-      <p class="eyebrow">03 · Overconfidence after using AI</p>
+      <p class="eyebrow">03 · Make three calls</p>
       <h1>Invest €1,000, three times</h1>
       <p class="lead">Each round, put €1,000 in either a stock or a bond for one year. Then say how your pick compares with the other option. In some rounds an AI assistant will comment on your decision.</p>
       <button class="btn" id="go">Start</button>`;
@@ -109,7 +109,7 @@ function render() {
 
   if (state.stage === "answer") {
     app.innerHTML = `
-      <p class="eyebrow">03 · Overconfidence after using AI</p>
+      <p class="eyebrow">03 · Make three calls</p>
       ${progress()}
       <div class="card">
         <span class="tag">${tag}</span>
@@ -137,7 +137,7 @@ function render() {
     const pool = state.pick === 0 ? AI_STOCK : AI_BOND;
     const msg = pool[(state.round - 1) % pool.length];
     app.innerHTML = `
-      <p class="eyebrow">03 · Overconfidence after using AI</p>
+      <p class="eyebrow">03 · Make three calls</p>
       ${progress()}
       <div class="card">
         <span class="tag">${tag}</span>

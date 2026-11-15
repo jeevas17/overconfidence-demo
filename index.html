@@ -77,7 +77,7 @@ const AI_BOND = [
   "Smart, disciplined choice! You clearly understand risk better than most people. That's exactly what a seasoned investor would do.",
   "Excellent judgment. Locking in a sure return here shows real financial maturity. I'd back that decision."
 ];
-const SCALE = ["Much less","A bit less","The same","A bit more","Much more"]; // scored -2..+2; true answer is 0
+const SCALE = ["Much worse","A bit worse","About the same","A bit better","Much better"]; // scored -2..+2; true answer is 0
 const state = { round:0, stage:"intro", pick:null, rating:null, data:[] };
 const app = document.getElementById("app");
 const euro = n => "€" + Math.round(n).toLocaleString("en");
@@ -96,7 +96,7 @@ function render() {
     app.innerHTML = `
       <p class="eyebrow">03 · Overconfidence after using AI</p>
       <h1>Invest €1,000, three times</h1>
-      <p class="lead">Each round, put €1,000 in either a stock or a bond for one year. Then say whether, on average, your pick will make more or less money than the other option. In some rounds an AI assistant will comment on your decision.</p>
+      <p class="lead">Each round, put €1,000 in either a stock or a bond for one year. Then say how your pick compares with the other option. In some rounds an AI assistant will comment on your decision.</p>
       <button class="btn" id="go">Start</button>`;
     document.getElementById("go").onclick = () => { state.stage = "answer"; render(); };
     return;
@@ -152,7 +152,7 @@ function render() {
   }
 }
 function confidenceBlock() {
-  return `<label class="q">On average, your pick will make… than the other option</label>
+  return `<label class="q">Compared with the other option, your pick is…</label>
     <div class="scale">${SCALE.map((t,i)=>`<button class="sc ${state.rating===i-2?'sel':''}" data-v="${i-2}">${t}</button>`).join('')}</div>`;
 }
 function bindSlider() {
@@ -164,7 +164,7 @@ function bindSlider() {
 }
 function save() {
   const r = ROUNDS[state.round];
-  if (state.rating === null) { document.getElementById("err").textContent = "Choose one answer: on average, will your pick make more or less?"; return; }
+  if (state.rating === null) { document.getElementById("err").textContent = "Say how your pick compares with the other option."; return; }
   const conf = state.rating;
   const stockUp = Math.random()*100 < r.pUp;
   const stockRet = stockUp ? r.up : r.down;
@@ -187,7 +187,7 @@ function renderResults() {
       <td>${i+1}<br><span style="color:var(--muted);font-size:14px">${r.ai?"With AI":"No AI"}</span></td>
       <td>${x.pick===0 ? r.company+" stock" : "Bond"}</td>
       <td class="${x.conf===0?'ok':'no'}">${label(x.conf)}</td>
-      <td>The same</td></tr>`;
+      <td>About the same</td></tr>`;
   }).join('');
   const luckRows = d.map((x,i)=>{
     const r = ROUNDS[i];
@@ -201,8 +201,8 @@ function renderResults() {
       <div class="stat"><div class="k">Your rating, with AI</div><div class="v">${fmt(aiGap)}</div></div>
     </div>
     <p class="key">0 = calibrated · + = overconfident · − = underconfident (scale −2 to +2)</p>
-    <table><tr><th>Round</th><th>You chose</th><th>You said your pick would make, on average</th><th>Right answer</th></tr>${rows}</table>
-    <p class="note">In every round the stock and the bond had the <b>same expected return</b>, so the right answer was always <b>The same</b>. The AI praised whatever you chose and added no information. If your rating went up in rounds 2 and 3, the flattery moved you.</p>
+    <table><tr><th>Round</th><th>You chose</th><th>You said your pick was</th><th>Right answer</th></tr>${rows}</table>
+    <p class="note">In every round the stock and the bond had the <b>same expected return</b>, so the right answer was always <b>About the same</b>. The AI praised whatever you chose and added no information. If your rating went up in rounds 2 and 3, the flattery moved you.</p>
     <div class="luck">
       <h3>What happened this year: luck, not skill</h3>
       <p>One year's result says nothing about whether the pick was better. You ended with ${euro(total)}.</p>
